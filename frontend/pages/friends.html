@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — Friends</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="main-nav"></div>
+<div id="main-sidebar"></div>
+
+<main class="main-content page-enter">
+  <h1 style="font-family:var(--font-display);font-size:clamp(40px,6vw,72px);margin-bottom:32px">FRIENDS</h1>
+
+  <!-- SEARCH FOR FRIENDS -->
+  <div class="surface" style="padding:24px;margin-bottom:32px">
+    <div class="section-title" style="margin-bottom:16px">Find People</div>
+    <div class="search-wrap">
+      <span class="search-icon">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input class="input" id="user-search" placeholder="Search by username…" oninput="searchUsers(this.value)" style="padding-left:44px">
+    </div>
+    <div id="user-search-results" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+  </div>
+
+  <!-- PENDING REQUESTS -->
+  <div style="margin-bottom:32px" id="requests-section">
+    <div class="section-title">Pending Requests</div>
+    <div id="requests-list"><div class="spinner" style="margin:20px auto"></div></div>
+  </div>
+
+  <!-- MY FRIENDS -->
+  <div style="margin-bottom:32px">
+    <div class="section-title">My Friends (<span id="friends-count">0</span>)</div>
+    <div id="friends-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      <div style="display:flex;justify-content:center;padding:40px"><div class="spinner"></div></div>
+    </div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/main.js"></script>
+<script>
+  initPage('friends');
+
+  let searchTimer = null;
+
+  async function loadFriends() {
+    const listEl = document.getElementById('friends-list');
+    const countEl = document.getElementById('friends-count');
+    try {
+      const { friends } = await api.friends.list();
+      countEl.textContent = friends.length;
+      if (!friends.length) { listEl.innerHTML = ui.empty('No friends yet. Search above to connect!'); return; }
+      listEl.innerHTML = friends.map(f => ui.friendCard(f,
+        `<button class="btn btn-ghost btn-sm" onclick="removeFriend('${f._id}')">Remove</button>`
+      )).join('');
+    } catch (err) { listEl.innerHTML = ui.empty(err.message); }
+  }
+
+  async function loadRequests() {
+    const el = document.getElementById('requests-list');
+    const sec = document.getElementById('requests-section');
+    try {
+      const { received, sent } = await api.friends.requests();
+      if (!received.length && !sent.length) { sec.style.display = 'none'; return; }
+      sec.style.display = 'block';
+
+      let html = '';
+      if (received.length) {
+        html += `<div class="text-dim text-sm" style="margin-bottom:8px">Received</div>`;
+        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px">`;
+        html += received.map(u => ui.friendCard(u, `
+          <button class="btn btn-primary btn-sm" onclick="accept('${u._id}')">Accept</button>
+          <button class="btn btn-ghost btn-sm" onclick="decline('${u._id}')">Decline</button>
+        `)).join('');
+        html += '</div>';
+      }
+      if (sent.length) {
+        html += `<div class="text-dim text-sm" style="margin-bottom:8px">Sent</div>`;
+        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`;
+        html += sent.map(u => ui.friendCard(u, `<span class="badge badge-white">Pending</span>`)).join('');
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    } catch { sec.style.display = 'none'; }
+  }
+
+  function searchUsers(val) {
+    clearTimeout(searchTimer);
+    const results = document.getElementById('user-search-results');
+    if (!val.trim()) { results.innerHTML = ''; return; }
+    searchTimer = setTimeout(async () => {
+      results.innerHTML = '<div class="text-dim text-sm">Searching…</div>';
+      try {
+        const { users } = await api.friends.search(val);
+        if (!users.length) { results.innerHTML = ui.empty('No users found'); return; }
+        results.innerHTML = users.map(u => ui.friendCard(u,
+          `<button class="btn btn-primary btn-sm" onclick="sendRequest('${u._id}', this)">+ Add</button>`
+        )).join('');
+      } catch (err) { results.innerHTML = ui.empty(err.message); }
+    }, 400);
+  }
+
+  async function sendRequest(userId, btn) {
+    try {
+      await api.friends.sendRequest(userId);
+      if (btn) { btn.textContent = 'Sent ✓'; btn.disabled = true; }
+      ui.success('Friend request sent!');
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function accept(userId) {
+    try {
+      await api.friends.accept(userId);
+      ui.success('Friend added!');
+      loadFriends(); loadRequests();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function decline(userId) {
+    try {
+      await api.friends.decline(userId);
+      loadRequests();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function removeFriend(userId) {
+    if (!confirm('Remove this friend?')) return;
+    try {
+      await api.friends.remove(userId);
+      ui.success('Friend removed');
+      loadFriends();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  loadFriends();
+  loadRequests();
+</script>
+</body>
+</html>

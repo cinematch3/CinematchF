@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — Sign In</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    body { display:flex; min-height:100vh; }
+    .auth-left {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      padding:60px 40px; position:relative; overflow:hidden;
+    }
+    .auth-right {
+      width:480px; flex-shrink:0; display:flex; flex-direction:column;
+      justify-content:center; padding:60px 48px;
+      border-left:1px solid var(--border); background:var(--surface);
+    }
+    @media (max-width:768px) { .auth-left { display:none; } .auth-right { width:100%; border:none; } }
+    .tab-btn {
+      flex:1; padding:12px; background:none; border:none; cursor:pointer;
+      font-family:var(--font-body); font-size:14px; font-weight:600;
+      color:var(--text-dim); border-bottom:2px solid transparent;
+      transition:all 0.2s;
+    }
+    .tab-btn.active { color:var(--text); border-bottom-color:var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="auth-left">
+  <div class="blob-bg">
+    <div class="blob blob-red" id="blob1" style="width:500px;height:500px;top:20%;left:10%"></div>
+    <div class="blob blob-blue" id="blob2" style="width:600px;height:600px;bottom:10%;right:5%"></div>
+  </div>
+  <div style="position:relative;z-index:1;text-align:center">
+    <a href="../index.html" class="nav-logo" style="font-size:48px;display:block;margin-bottom:32px">CINEVERSE.</a>
+    <h2 style="font-family:var(--font-display);font-size:clamp(48px,8vw,96px);line-height:0.9;margin-bottom:24px">
+      YOUR NEXT<br><span style="color:var(--text-muted)">FAVORITE</span><br>MOVIE.
+    </h2>
+    <p style="color:var(--text-dim);font-size:16px;max-width:360px;margin:0 auto;line-height:1.6">
+      Track what you've watched, rate films, and discover new ones with people who share your taste.
+    </p>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="auth-right">
+  <a href="../index.html" class="nav-logo" style="font-size:24px;display:block;margin-bottom:40px">CINEVERSE.</a>
+
+  <!-- TABS -->
+  <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:32px">
+    <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+    <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div id="login-form">
+    <div class="input-group" style="margin-bottom:16px">
+      <label class="input-label">Email</label>
+      <input class="input" type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="input-group" style="margin-bottom:28px">
+      <label class="input-label">Password</label>
+      <input class="input" type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary w-full btn-lg" onclick="doLogin()" id="login-btn">Sign In</button>
+    <div class="divider"></div>
+    <button class="btn btn-ghost w-full" onclick="doGuest()">Continue as Guest</button>
+  </div>
+
+  <!-- REGISTER FORM -->
+  <div id="register-form" class="hidden">
+    <div class="input-group" style="margin-bottom:16px">
+      <label class="input-label">Username</label>
+      <input class="input" id="reg-username" placeholder="cinephile99">
+    </div>
+    <div class="input-group" style="margin-bottom:16px">
+      <label class="input-label">Email</label>
+      <input class="input" type="email" id="reg-email" placeholder="you@example.com">
+    </div>
+    <div class="input-group" style="margin-bottom:28px">
+      <label class="input-label">Password</label>
+      <input class="input" type="password" id="reg-password" placeholder="Min. 6 characters" onkeydown="if(event.key==='Enter')doRegister()">
+    </div>
+    <button class="btn btn-primary w-full btn-lg" onclick="doRegister()" id="register-btn">Create Account</button>
+  </div>
+
+  <p class="text-dim text-sm" style="margin-top:24px;text-align:center">
+    By continuing you agree to our <span style="color:var(--text)">Terms of Service</span> and <span style="color:var(--text)">Privacy Policy</span>.
+  </p>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  // Parallax blobs
+  document.addEventListener('mousemove', e => {
+    const mx = (e.clientX - window.innerWidth / 2) * 0.03;
+    const my = (e.clientY - window.innerHeight / 2) * 0.03;
+    const b1 = document.getElementById('blob1');
+    const b2 = document.getElementById('blob2');
+    if (b1) b1.style.transform = `translate(${mx}px, ${my}px)`;
+    if (b2) b2.style.transform = `translate(${-mx}px, ${-my}px)`;
+  });
+
+  // Redirect if already logged in
+  if (auth.isLoggedIn()) {
+    const redirect = new URLSearchParams(location.search).get('redirect');
+    window.location.href = redirect || 'browse.html';
+  }
+
+  function switchTab(tab) {
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  }
+
+  // Check URL param to default to register tab
+  if (new URLSearchParams(location.search).get('mode') === 'register') {
+    switchTab('register');
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) { ui.error('Please fill in all fields'); return; }
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      const { token, user } = await api.auth.login({ email, password });
+      auth.setSession(token, user);
+      const redirect = new URLSearchParams(location.search).get('redirect');
+      window.location.href = redirect || (user.genres?.length ? 'browse.html' : 'browse.html');
+    } catch (err) {
+      ui.error(err.message);
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    if (!username || !email || !password) { ui.error('Please fill in all fields'); return; }
+    if (password.length < 6) { ui.error('Password must be at least 6 characters'); return; }
+    const btn = document.getElementById('register-btn');
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+      const { token, user } = await api.auth.register({ username, email, password });
+      auth.setSession(token, user);
+      window.location.href = 'browse.html';
+    } catch (err) {
+      ui.error(err.message);
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
+  }
+
+  async function doGuest() {
+    try {
+      const { token, user } = await api.auth.guest({ genres: [] });
+      auth.setSession(token, user);
+      window.location.href = 'browse.html';
+    } catch (err) { ui.error(err.message); }
+  }
+</script>
+</body>
+</html>

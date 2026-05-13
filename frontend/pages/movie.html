@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — Movie</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .cast-card { text-align:center; flex-shrink:0; width:100px; }
+    .cast-card img, .cast-placeholder {
+      width:80px;height:80px;border-radius:50%;object-fit:cover;
+      background:var(--surface2);display:flex;align-items:center;justify-content:center;
+      font-size:11px;color:var(--text-muted);margin:0 auto 8px;
+    }
+    .review-card { padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:16px; }
+    .star-btn { background:none;border:none;cursor:pointer;padding:4px;font-size:24px;transition:transform 0.15s; }
+    .star-btn:hover { transform:scale(1.2); }
+  </style>
+</head>
+<body>
+<div id="main-nav"></div>
+<div id="main-sidebar"></div>
+
+<main class="main-content page-enter" id="movie-main">
+  <div style="display:flex;justify-content:center;padding:80px"><div class="spinner"></div></div>
+</main>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <h3 class="text-2xl" style="margin-bottom:20px">Rate & Review</h3>
+    <div style="margin-bottom:20px">
+      <div class="input-label" style="margin-bottom:10px">Your Rating</div>
+      <div style="display:flex;gap:4px" id="star-row">
+        ${Array.from({length:10}, (_,i) => `
+          <button class="star-btn" data-val="${i+1}" onmouseover="hoverStars(${i+1})" onmouseout="resetStars()" onclick="setRating(${i+1})">☆</button>`).join('')}
+      </div>
+      <div id="rating-label" class="text-dim text-sm" style="margin-top:8px">Click to rate</div>
+    </div>
+    <div class="input-group" style="margin-bottom:16px">
+      <label class="input-label">Review (optional)</label>
+      <textarea class="input" id="review-text" rows="4" placeholder="What did you think?" style="resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <input type="checkbox" id="spoiler-check" style="accent-color:var(--red)">
+      <label for="spoiler-check" class="text-dim text-sm">Contains spoilers</label>
+    </div>
+    <button class="btn btn-primary w-full" onclick="submitReview()">Submit Review</button>
+    <button class="btn btn-ghost w-full" style="margin-top:8px" onclick="ui.closeModal('review-modal')">Cancel</button>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/main.js"></script>
+<script>
+  initPage('');
+  const params = new URLSearchParams(location.search);
+  const movieId = params.get('id');
+  let currentMovie = null;
+  let userRating = 0;
+  let watchlistStatus = { inWatchlist: false, watched: false };
+
+  if (!movieId) {
+    document.getElementById('movie-main').innerHTML = ui.empty('No movie ID provided');
+  } else {
+    loadMovie();
+  }
+
+  async function loadMovie() {
+    try {
+      const [movie, reviews] = await Promise.all([
+        api.movies.details(movieId),
+        api.reviews.getByMovie(movieId)
+      ]);
+      currentMovie = movie;
+      if (auth.isLoggedIn()) {
+        try { watchlistStatus = await api.watchlist.check(movieId); } catch {}
+        try {
+          const { review } = await api.reviews.getMy(movieId);
+          if (review) userRating = review.rating;
+        } catch {}
+      }
+      renderMovie(movie, reviews.reviews || []);
+    } catch (err) {
+      document.getElementById('movie-main').innerHTML = `<div style="text-align:center;padding:80px;color:var(--text-dim)">Failed to load: ${err.message}</div>`;
+    }
+  }
+
+  function renderMovie(m, reviews) {
+    const genres = (m.genres || []).map(g => `<span class="badge badge-white">${g.name}</span>`).join('');
+    const cast = (m.credits?.cast || []).slice(0, 10);
+    const trailer = (m.videos?.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
+    const similar = (m.similar?.results || []).slice(0, 8);
+
+    document.getElementById('movie-main').innerHTML = `
+      <!-- BACKDROP -->
+      <div style="position:fixed;inset:0;z-index:-1;pointer-events:none">
+        <div style="position:absolute;inset:0;background-image:url('${backdropUrl(m.backdrop_path)}');background-size:cover;background-position:center;opacity:0.15"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,var(--bg) 60%)"></div>
+      </div>
+
+      <!-- MOVIE INFO -->
+      <div style="display:flex;gap:40px;margin-bottom:48px;flex-wrap:wrap">
+        <img src="${imgUrl(m.poster_path,'w500')}" alt="${m.title}"
+          style="width:280px;border-radius:var(--radius-xl);object-fit:cover;flex-shrink:0;box-shadow:0 32px 80px rgba(0,0,0,0.7)"
+          onerror="this.style.display='none'">
+        <div style="flex:1;min-width:280px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${genres}</div>
+          <h1 style="font-family:var(--font-display);font-size:clamp(40px,6vw,80px);line-height:0.9;margin-bottom:16px">${m.title}</h1>
+          <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+            <div class="rating-ring ${ratingClass(m.vote_average)}" style="width:56px;height:56px;font-size:16px">${m.vote_average?.toFixed(1)}</div>
+            <span class="text-dim">${m.release_date?.split('-')[0] || ''}</span>
+            <span class="text-dim">${m.runtime ? m.runtime + ' min' : ''}</span>
+            <span class="text-dim">${m.vote_count?.toLocaleString()} votes</span>
+          </div>
+          <p style="color:var(--text-dim);line-height:1.7;margin-bottom:28px;max-width:600px;font-size:15px">${m.overview}</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="openReviewModal()">★ Rate This</button>
+            <button class="btn ${watchlistStatus.inWatchlist ? 'btn-secondary' : 'btn-ghost'}" id="wl-btn" onclick="toggleWatchlist()">
+              ${watchlistStatus.inWatchlist ? (watchlistStatus.watched ? '✓ Watched' : '✓ In Watchlist') : '+ Watchlist'}
+            </button>
+            ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="btn btn-ghost">▶ Trailer</a>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- CAST -->
+      ${cast.length ? `
+      <div style="margin-bottom:48px">
+        <div class="section-title">Cast</div>
+        <div class="scroll-row">
+          ${cast.map(p => `
+            <div class="cast-card">
+              ${p.profile_path
+                ? `<img src="${imgUrl(p.profile_path,'w185')}" alt="${p.name}">`
+                : `<div class="cast-placeholder">${p.name.slice(0,2)}</div>`}
+              <div style="font-size:12px;font-weight:600;margin-bottom:2px">${p.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${p.character}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- REVIEWS -->
+      <div style="margin-bottom:48px">
+        <div class="section-title">
+          Reviews (${reviews.length})
+          <button class="btn btn-ghost btn-sm" onclick="openReviewModal()">Write a Review</button>
+        </div>
+        <div id="reviews-list">
+          ${reviews.length ? reviews.map(r => renderReviewCard(r)).join('') : ui.empty('No reviews yet. Be the first!')}
+        </div>
+      </div>
+
+      <!-- SIMILAR -->
+      ${similar.length ? `
+      <div style="margin-bottom:48px">
+        <div class="section-title">You Might Also Like</div>
+        <div class="scroll-row">${similar.map(m => ui.movieCard(m, '160px')).join('')}</div>
+      </div>` : ''}
+    `;
+  }
+
+  function renderReviewCard(r) {
+    const user = r.user || {};
+    const spoilerHidden = r.containsSpoilers;
+    return `
+      <div class="review-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          ${auth.renderAvatar(user, 'avatar-sm')}
+          <div>
+            <a href="profile.html?id=${user._id}" style="font-weight:700">${user.username || 'Unknown'}</a>
+            <div class="text-dim text-sm">${timeAgo(r.createdAt)}</div>
+          </div>
+          <div class="rating-ring ${ratingClass(r.rating)}" style="margin-left:auto;width:40px;height:40px;font-size:13px">${r.rating}/10</div>
+        </div>
+        ${r.containsSpoilers ? '<div class="badge badge-red" style="margin-bottom:8px">⚠ Spoilers</div>' : ''}
+        ${r.content ? `<p style="color:var(--text-dim);line-height:1.6;font-size:14px">${r.content}</p>` : ''}
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <button class="btn btn-ghost btn-sm" onclick="likeReview('${r._id}', this)">♡ ${r.likes?.length || 0}</button>
+          ${auth.getUser()?._id === String(user._id) ? `<button class="btn btn-ghost btn-sm" onclick="deleteReview('${r._id}')">Delete</button>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function hoverStars(n) {
+    document.querySelectorAll('.star-btn').forEach((btn, i) => {
+      btn.textContent = i < n ? '★' : '☆';
+    });
+  }
+  function resetStars() {
+    document.querySelectorAll('.star-btn').forEach((btn, i) => {
+      btn.textContent = i < userRating ? '★' : '☆';
+    });
+  }
+  function setRating(n) {
+    userRating = n;
+    document.getElementById('rating-label').textContent = `${n}/10 — ${['','Awful','Bad','Poor','Below Average','Average','Decent','Good','Great','Excellent','Masterpiece'][n]}`;
+    resetStars();
+  }
+
+  function openReviewModal() {
+    if (!auth.isLoggedIn()) { ui.error('Sign in to review'); return; }
+    ui.openModal('review-modal');
+    resetStars();
+  }
+
+  async function submitReview() {
+    if (!userRating) { ui.error('Please select a rating'); return; }
+    const content = document.getElementById('review-text').value;
+    const containsSpoilers = document.getElementById('spoiler-check').checked;
+    try {
+      await api.reviews.create({
+        movieId: parseInt(movieId), movieTitle: currentMovie?.title,
+        moviePoster: currentMovie?.poster_path, rating: userRating, content, containsSpoilers
+      });
+      ui.success('Review submitted!');
+      ui.closeModal('review-modal');
+      loadMovie();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function toggleWatchlist() {
+    if (!auth.isLoggedIn()) { ui.error('Sign in to use watchlist'); return; }
+    const btn = document.getElementById('wl-btn');
+    try {
+      if (watchlistStatus.inWatchlist) {
+        await api.watchlist.remove(movieId);
+        watchlistStatus.inWatchlist = false;
+        btn.textContent = '+ Watchlist';
+        btn.className = 'btn btn-ghost';
+        ui.success('Removed from watchlist');
+      } else {
+        await api.watchlist.add({
+          movieId: parseInt(movieId), title: currentMovie?.title,
+          posterPath: currentMovie?.poster_path, backdropPath: currentMovie?.backdrop_path,
+          overview: currentMovie?.overview, voteAverage: currentMovie?.vote_average,
+          genres: (currentMovie?.genres || []).map(g => g.name)
+        });
+        watchlistStatus.inWatchlist = true;
+        btn.textContent = '✓ In Watchlist';
+        btn.className = 'btn btn-secondary';
+        ui.success('Added to watchlist!');
+      }
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function likeReview(reviewId, btn) {
+    if (!auth.isLoggedIn()) { ui.error('Sign in to like reviews'); return; }
+    try {
+      const { likes, liked } = await api.reviews.like(reviewId);
+      btn.textContent = `${liked ? '♥' : '♡'} ${likes}`;
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function deleteReview(reviewId) {
+    if (!confirm('Delete your review?')) return;
+    try {
+      await api.reviews.delete(reviewId);
+      ui.success('Review deleted');
+      loadMovie();
+    } catch (err) { ui.error(err.message); }
+  }
+</script>
+</body>
+</html>

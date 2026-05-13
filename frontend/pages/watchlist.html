@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — My Watchlist</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="main-nav"></div>
+<div id="main-sidebar"></div>
+
+<main class="main-content page-enter">
+  <h1 style="font-family:var(--font-display);font-size:clamp(40px,6vw,72px);margin-bottom:12px">MY WATCHLIST</h1>
+  <p class="text-dim" style="margin-bottom:32px">Movies you want to watch or have watched</p>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('unwatched', this)">To Watch (<span id="unwatched-count">0</span>)</div>
+    <div class="tab" onclick="switchTab('watched', this)">Watched (<span id="watched-count">0</span>)</div>
+  </div>
+
+  <div id="tab-unwatched">
+    <div id="unwatched-grid" class="movie-grid-lg">
+      <div style="display:flex;justify-content:center;padding:60px;grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div id="tab-watched" class="hidden">
+    <div id="watched-grid" class="movie-grid-lg"></div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/main.js"></script>
+<script>
+  initPage('watchlist');
+
+  async function loadWatchlist() {
+    try {
+      const { items } = await api.watchlist.get();
+      const unwatched = items.filter(i => !i.watched);
+      const watched = items.filter(i => i.watched);
+
+      document.getElementById('unwatched-count').textContent = unwatched.length;
+      document.getElementById('watched-count').textContent = watched.length;
+
+      renderGrid('unwatched-grid', unwatched, true);
+      renderGrid('watched-grid', watched, false);
+    } catch (err) {
+      document.getElementById('unwatched-grid').innerHTML = ui.empty(err.message);
+    }
+  }
+
+  function renderGrid(gridId, items, showActions) {
+    const grid = document.getElementById(gridId);
+    if (!items.length) { grid.innerHTML = ui.empty('Nothing here yet'); return; }
+    grid.innerHTML = items.map(item => `
+      <div class="movie-card" onclick="window.location.href='movie.html?id=${item.movieId}'">
+        ${item.posterPath
+          ? `<img src="${imgUrl(item.posterPath)}" alt="${item.title}" loading="lazy">`
+          : `<div class="movie-card-placeholder">${item.title}</div>`
+        }
+        <div class="movie-card-overlay">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px">${item.title}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${showActions ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();markWatched(${item.movieId})">✓ Watched</button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();removeItem(${item.movieId})">Remove</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function markWatched(movieId) {
+    try {
+      await api.watchlist.markWatched(movieId);
+      ui.success('Marked as watched!');
+      loadWatchlist();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  async function removeItem(movieId) {
+    try {
+      await api.watchlist.remove(movieId);
+      ui.success('Removed from watchlist');
+      loadWatchlist();
+    } catch (err) { ui.error(err.message); }
+  }
+
+  function switchTab(tabId, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    ['unwatched', 'watched'].forEach(id => document.getElementById('tab-' + id).classList.add('hidden'));
+    el.classList.add('active');
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+  }
+
+  loadWatchlist();
+</script>
+</body>
+</html>

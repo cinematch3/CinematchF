@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CineMatch — Movies Made For You</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .landing {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .landing-hero {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 120px 32px 80px;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero-title {
+        font-family: var(--font-display);
+        font-size: clamp(72px, 12vw, 160px);
+        line-height: 0.85;
+        letter-spacing: 2px;
+        margin-bottom: 40px;
+        position: relative;
+        z-index: 1;
+      }
+      .hero-sub {
+        color: var(--text-muted);
+      }
+      .search-bar {
+        position: relative;
+        width: 100%;
+        max-width: 560px;
+        z-index: 1;
+      }
+      .search-bar input {
+        width: 100%;
+        background: rgba(17, 17, 17, 0.6);
+        border: 1px solid var(--border);
+        padding: 22px 64px 22px 24px;
+        border-radius: 20px;
+        color: var(--text);
+        font-size: 17px;
+        font-family: var(--font-body);
+        outline: none;
+        cursor: pointer;
+        backdrop-filter: blur(12px);
+        transition: border-color 0.2s;
+      }
+      .search-bar input:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .search-bar-icon {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+      .genre-step {
+        display: none;
+      }
+      .genre-step.active {
+        display: block;
+      }
+      .genres-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 32px;
+      }
+      @media (min-width: 600px) {
+        .genres-grid {
+          grid-template-columns: repeat(5, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAV -->
+    <nav class="nav">
+      <span class="nav-logo">CINEMATCH.</span>
+      <div
+        style="margin-left: auto; display: flex; gap: 12px; align-items: center"
+      >
+        <button class="btn btn-ghost btn-sm" onclick="goToLogin()">
+          Sign In
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="showRegister()">
+          Join Free
+        </button>
+      </div>
+    </nav>
+
+    <!-- LANDING HERO -->
+    <div class="landing" id="landing-screen">
+      <div class="landing-hero">
+        <!-- Blobs -->
+        <div class="blob-bg">
+          <div
+            class="blob blob-red"
+            id="blob1"
+            style="width: 600px; height: 600px; top: 10%; left: 15%"
+          ></div>
+          <div
+            class="blob blob-blue"
+            id="blob2"
+            style="width: 700px; height: 700px; bottom: 10%; right: 10%"
+          ></div>
+        </div>
+
+        <p
+          class="text-xs tracking-widest text-red uppercase"
+          style="margin-bottom: 20px; position: relative; z-index: 1"
+        >
+          Powered by TMDB · Personalized by AI
+        </p>
+        <h1 class="hero-title">
+          MOVIES<br /><span class="hero-sub">MADE FOR</span><br />YOU.
+        </h1>
+
+        <div class="search-bar">
+          <input
+            type="text"
+            placeholder="Search your vibe..."
+            readonly
+            onclick="openSearchModal()"
+          />
+          <svg
+            class="search-bar-icon"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+            position: relative;
+            z-index: 1;
+          "
+        >
+          <button class="btn btn-primary btn-lg" onclick="startGuest()">
+            Continue as Guest
+          </button>
+          <button class="btn btn-ghost btn-lg" onclick="showRegister()">
+            Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENRE SELECTION STEP -->
+    <div
+      id="genre-screen"
+      class="genre-step"
+      style="
+        min-height: 100vh;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 120px 32px 60px;
+      "
+    >
+      <div style="max-width: 900px; width: 100%">
+        <p
+          class="text-xs tracking-widest text-red uppercase"
+          style="margin-bottom: 12px"
+        >
+          Step 1 of 1
+        </p>
+        <h2
+          style="
+            font-family: var(--font-display);
+            font-size: clamp(40px, 6vw, 80px);
+            margin-bottom: 8px;
+          "
+        >
+          PICK 3+ GENRES
+        </h2>
+        <p class="text-dim" style="margin-bottom: 40px; font-size: 16px">
+          We use this to train your personal recommendation engine.
+        </p>
+        <div class="genres-grid" id="genre-grid"></div>
+        <button
+          class="btn btn-secondary btn-lg w-full"
+          id="genre-submit"
+          disabled
+          onclick="submitGenres()"
+        >
+          FINALIZE MY FEED (<span id="genre-count">0</span>/3)
+        </button>
+      </div>
+    </div>
+
+    <!-- AUTH MODAL — LOGIN -->
+    <div class="modal-overlay" id="login-modal">
+      <div class="modal">
+        <h3 class="text-3xl" style="text-align: center; margin-bottom: 6px">
+          Welcome back.
+        </h3>
+        <p class="text-dim text-center" style="margin-bottom: 28px">
+          Sign in to your CineMatch account
+        </p>
+        <div class="input-group" style="margin-bottom: 16px">
+          <label class="input-label">Email</label>
+          <input
+            class="input"
+            type="email"
+            id="login-email"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div class="input-group" style="margin-bottom: 24px">
+          <label class="input-label">Password</label>
+          <input
+            class="input"
+            type="password"
+            id="login-password"
+            placeholder="••••••••"
+          />
+        </div>
+        <button class="btn btn-primary w-full btn-lg" onclick="doLogin()">
+          Sign In
+        </button>
+        <button
+          class="btn btn-ghost w-full"
+          style="margin-top: 10px"
+          onclick="
+            ui.closeModal('login-modal');
+            showRegister();
+          "
+        >
+          No account? Join Free
+        </button>
+        <button
+          class="btn btn-ghost w-full"
+          style="margin-top: 4px; color: var(--text-muted)"
+          onclick="ui.closeModal('login-modal')"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- AUTH MODAL — REGISTER -->
+    <div class="modal-overlay" id="register-modal">
+      <div class="modal">
+        <h3 class="text-3xl" style="text-align: center; margin-bottom: 6px">
+          Join the Plot.
+        </h3>
+        <p class="text-dim text-center" style="margin-bottom: 28px">
+          Personalized IMDB 2.0 starts here.
+        </p>
+        <div class="input-group" style="margin-bottom: 14px">
+          <label class="input-label">Username</label>
+          <input class="input" id="reg-username" placeholder="cinephile99" />
+        </div>
+        <div class="input-group" style="margin-bottom: 14px">
+          <label class="input-label">Email</label>
+          <input
+            class="input"
+            type="email"
+            id="reg-email"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div class="input-group" style="margin-bottom: 24px">
+          <label class="input-label">Password</label>
+          <input
+            class="input"
+            type="password"
+            id="reg-password"
+            placeholder="••••••••"
+          />
+        </div>
+        <button class="btn btn-primary w-full btn-lg" onclick="doRegister()">
+          Create Account
+        </button>
+        <button
+          class="btn btn-ghost w-full"
+          style="margin-top: 10px"
+          onclick="
+            ui.closeModal('register-modal');
+            goToLogin();
+          "
+        >
+          Already have an account? Sign In
+        </button>
+        <button
+          class="btn btn-ghost w-full"
+          style="margin-top: 4px; color: var(--text-muted)"
+          onclick="ui.closeModal('register-modal')"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      const GENRES = [
+        "Sci-Fi",
+        "Action",
+        "Horror",
+        "Comedy",
+        "Drama",
+        "Anime",
+        "Thriller",
+        "Mystery",
+        "Romance",
+        "Fantasy",
+      ];
+      let selectedGenres = [];
+      let pendingGuestMode = false;
+
+      // Parallax blobs
+      document.addEventListener("mousemove", (e) => {
+        const mx = (e.clientX - window.innerWidth / 2) * 0.04;
+        const my = (e.clientY - window.innerHeight / 2) * 0.04;
+        const b1 = document.getElementById("blob1");
+        const b2 = document.getElementById("blob2");
+        if (b1) b1.style.transform = `translate(${mx}px, ${my}px)`;
+        if (b2)
+          b2.style.transform = `translate(${-mx * 0.7}px, ${-my * 0.7}px)`;
+      });
+
+      // Redirect if already logged in
+      if (auth.isLoggedIn()) {
+        window.location.href = "pages/browse.html";
+      }
+
+      function openSearchModal() {
+        if (!auth.isLoggedIn()) {
+          showRegister();
+          return;
+        }
+        window.location.href = "pages/browse.html";
+      }
+
+      function goToLogin() {
+        ui.openModal("login-modal");
+      }
+      function showRegister() {
+        ui.openModal("register-modal");
+      }
+
+      function showGenreStep(isGuest) {
+        pendingGuestMode = isGuest;
+        document.getElementById("landing-screen").style.display = "none";
+        const gs = document.getElementById("genre-screen");
+        gs.style.display = "flex";
+        gs.classList.add("page-enter");
+        renderGenreGrid();
+      }
+
+      function renderGenreGrid() {
+        const grid = document.getElementById("genre-grid");
+        grid.innerHTML = GENRES.map(
+          (g) => `
+      <div class="genre-pill${selectedGenres.includes(g) ? " selected" : ""}" onclick="toggleGenre('${g}')">${g}</div>
+    `,
+        ).join("");
+      }
+
+      function toggleGenre(g) {
+        if (selectedGenres.includes(g))
+          selectedGenres = selectedGenres.filter((x) => x !== g);
+        else selectedGenres.push(g);
+        document.getElementById("genre-count").textContent =
+          selectedGenres.length;
+        document.getElementById("genre-submit").disabled =
+          selectedGenres.length < 3;
+        renderGenreGrid();
+      }
+
+      async function startGuest() {
+        showGenreStep(true);
+      }
+
+      async function submitGenres() {
+        const btn = document.getElementById("genre-submit");
+        btn.disabled = true;
+        btn.textContent = "Setting up...";
+        try {
+          let result;
+          if (pendingGuestMode) {
+            result = await api.auth.guest({ genres: selectedGenres });
+          } else {
+            result = await api.auth.updateGenres(selectedGenres);
+          }
+          if (result.token) auth.setSession(result.token, result.user);
+          else auth.setSession(auth.getToken(), result.user);
+          window.location.href = "pages/browse.html";
+        } catch (err) {
+          ui.error(err.message);
+          btn.disabled = false;
+          btn.textContent = "FINALIZE MY FEED";
+        }
+      }
+
+      async function doLogin() {
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        if (!email || !password) {
+          ui.error("Fill in all fields");
+          return;
+        }
+        try {
+          const { token, user } = await api.auth.login({ email, password });
+          auth.setSession(token, user);
+          ui.closeModal("login-modal");
+          if (!user.genres?.length) showGenreStep(false);
+          else window.location.href = "pages/browse.html";
+        } catch (err) {
+          ui.error(err.message);
+        }
+      }
+
+      async function doRegister() {
+        const username = document.getElementById("reg-username").value;
+        const email = document.getElementById("reg-email").value;
+        const password = document.getElementById("reg-password").value;
+        if (!username || !email || !password) {
+          ui.error("Fill in all fields");
+          return;
+        }
+        try {
+          const { token, user } = await api.auth.register({
+            username,
+            email,
+            password,
+          });
+          auth.setSession(token, user);
+          ui.closeModal("register-modal");
+          showGenreStep(false);
+        } catch (err) {
+          ui.error(err.message);
+        }
+      }
+    </script>
+  </body>
+</html>

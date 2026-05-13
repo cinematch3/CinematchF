@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — Notifications</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="main-nav"></div>
+<div id="main-sidebar"></div>
+
+<main class="main-content page-enter">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
+    <h1 style="font-family:var(--font-display);font-size:clamp(40px,6vw,72px)">NOTIFICATIONS</h1>
+    <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark All Read</button>
+  </div>
+
+  <div class="surface" style="padding:0 24px" id="notif-list">
+    <div style="display:flex;justify-content:center;padding:60px"><div class="spinner"></div></div>
+  </div>
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/main.js"></script>
+<script>
+  initPage('');
+
+  async function loadNotifs() {
+    const el = document.getElementById('notif-list');
+    try {
+      const { notifications } = await api.notifications.get();
+      if (!notifications.length) { el.innerHTML = ui.empty('No notifications yet'); return; }
+      el.innerHTML = notifications.map(n => ui.notifItem(n)).join('');
+    } catch (err) { el.innerHTML = ui.empty(err.message); }
+  }
+
+  async function markAllRead() {
+    try {
+      await api.notifications.readAll();
+      loadNotifs();
+      ui.success('All marked as read');
+    } catch (err) { ui.error(err.message); }
+  }
+
+  loadNotifs();
+</script>
+</body>
+</html>

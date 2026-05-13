@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineVerse — Browse</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="main-nav"></div>
+<div id="main-sidebar"></div>
+
+<main class="main-content page-enter">
+
+  <!-- HERO SPOTLIGHT -->
+  <div class="hero" id="hero-section">
+    <div class="skeleton" style="position:absolute;inset:0;border-radius:var(--radius-xl)"></div>
+  </div>
+
+  <!-- SEARCH + FILTERS -->
+  <div style="display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap">
+    <div class="search-wrap" style="flex:1;min-width:240px">
+      <span class="search-icon">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input class="input" id="search-input" placeholder="Search movies…" oninput="handleSearch(this.value)" style="padding-left:44px">
+    </div>
+    <select class="input" id="genre-filter" onchange="handleFilter()" style="width:auto;min-width:140px">
+      <option value="">All Genres</option>
+    </select>
+    <select class="input" id="sort-filter" onchange="handleFilter()" style="width:auto;min-width:160px">
+      <option value="popularity.desc">Most Popular</option>
+      <option value="vote_average.desc">Top Rated</option>
+      <option value="release_date.desc">Newest</option>
+      <option value="revenue.desc">Box Office</option>
+    </select>
+  </div>
+
+  <!-- SEARCH RESULTS (hidden by default) -->
+  <div id="search-results-section" class="hidden">
+    <div class="section-title">Search Results</div>
+    <div class="movie-grid" id="search-results-grid"></div>
+    <div style="text-align:center;margin-top:24px" id="search-load-more"></div>
+  </div>
+
+  <!-- MAIN CONTENT (hidden when searching) -->
+  <div id="main-sections">
+    <!-- TRENDING -->
+    <div style="margin-bottom:48px">
+      <div class="section-title">
+        🔥 Trending This Week
+        <a class="section-link" href="browse.html?tab=trending">See all →</a>
+      </div>
+      <div class="scroll-row" id="trending-row">
+        <div class="scroll-row">${Array(5).fill('<div class="skeleton" style="width:160px;aspect-ratio:2/3;border-radius:20px;flex-shrink:0"></div>').join('')}</div>
+      </div>
+    </div>
+
+    <!-- TOP RATED -->
+    <div style="margin-bottom:48px">
+      <div class="section-title">
+        ⭐ Top Rated All Time
+        <a class="section-link" href="browse.html?tab=top">See all →</a>
+      </div>
+      <div class="scroll-row" id="top-rated-row"></div>
+    </div>
+
+    <!-- UPCOMING -->
+    <div style="margin-bottom:48px">
+      <div class="section-title">
+        🎬 Coming Soon
+        <a class="section-link" href="browse.html?tab=upcoming">See all →</a>
+      </div>
+      <div class="scroll-row" id="upcoming-row"></div>
+    </div>
+
+    <!-- FRIEND ACTIVITY -->
+    <div style="margin-bottom:48px" id="activity-section">
+      <div class="section-title">👥 Friend Activity</div>
+      <div id="activity-feed" class="surface" style="padding:0 24px"></div>
+    </div>
+  </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/main.js"></script>
+<script>
+  initPage('browse');
+
+  let searchTimer = null;
+  let searchPage = 1;
+  let currentSearch = '';
+
+  async function loadHero(movies) {
+    const movie = movies[Math.floor(Math.random() * Math.min(movies.length, 5))];
+    if (!movie) return;
+    const hero = document.getElementById('hero-section');
+    hero.innerHTML = `
+      <div class="hero-bg" style="background-image:url('${backdropUrl(movie.backdrop_path)}')"></div>
+      <div class="hero-content">
+        <div class="hero-badge">Daily Spotlight</div>
+        <h2 style="font-family:var(--font-display);font-size:clamp(36px,6vw,80px);margin-bottom:8px;line-height:0.9">${movie.title}</h2>
+        <p style="color:var(--text-dim);max-width:500px;margin-bottom:24px;font-size:15px;line-height:1.6">${(movie.overview || '').slice(0, 140)}…</p>
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn btn-secondary" onclick="window.location.href='movie.html?id=${movie.id}'">View Details</button>
+          <button class="btn btn-ghost" onclick="addToWatchlist(${JSON.stringify(movie).replace(/"/g, '&quot;')})">+ Watchlist</button>
+          <div class="rating-ring ${ratingClass(movie.vote_average)}">${movie.vote_average?.toFixed(1)}</div>
+        </div>
+      </div>`;
+  }
+
+  async function loadRow(rowId, movies) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.innerHTML = movies.map(m => ui.movieCard(m, '160px')).join('');
+  }
+
+  async function loadGenreOptions() {
+    try {
+      const { genres } = await api.movies.genres();
+      const sel = document.getElementById('genre-filter');
+      genres.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id; opt.textContent = g.name;
+        sel.appendChild(opt);
+      });
+    } catch {}
+  }
+
+  async function loadActivityFeed() {
+    const el = document.getElementById('activity-feed');
+    try {
+      const { activities } = await api.activity.feed();
+      if (!activities.length) { el.innerHTML = ui.empty('Follow friends to see their activity here'); return; }
+      el.innerHTML = activities.slice(0, 8).map(a => ui.activityItem(a)).join('');
+    } catch { el.innerHTML = ui.empty('Could not load activity'); }
+  }
+
+  function handleSearch(val) {
+    clearTimeout(searchTimer);
+    currentSearch = val.trim();
+    if (!currentSearch) {
+      document.getElementById('search-results-section').classList.add('hidden');
+      document.getElementById('main-sections').classList.remove('hidden');
+      return;
+    }
+    searchTimer = setTimeout(() => doSearch(1), 400);
+  }
+
+  async function doSearch(page = 1) {
+    const resultsSection = document.getElementById('search-results-section');
+    const grid = document.getElementById('search-results-grid');
+    resultsSection.classList.remove('hidden');
+    document.getElementById('main-sections').classList.add('hidden');
+
+    if (page === 1) grid.innerHTML = ui.skeletonCards(8);
+    try {
+      const { results, total_results } = await api.movies.search(currentSearch, page);
+      if (page === 1) grid.innerHTML = '';
+      results.forEach(m => { grid.insertAdjacentHTML('beforeend', ui.movieCard(m, '180px')); });
+
+      const loadMore = document.getElementById('search-load-more');
+      if (results.length === 20) {
+        loadMore.innerHTML = `<button class="btn btn-ghost" onclick="doSearch(${page + 1})">Load More</button>`;
+      } else { loadMore.innerHTML = ''; }
+    } catch (err) { grid.innerHTML = ui.empty('Search failed: ' + err.message); }
+  }
+
+  async function handleFilter() {
+    const genre = document.getElementById('genre-filter').value;
+    const sort = document.getElementById('sort-filter').value;
+    const search = document.getElementById('search-input').value.trim();
+    if (search) { doSearch(1); return; }
+
+    const grid = document.getElementById('search-results-grid');
+    const resultsSection = document.getElementById('search-results-section');
+    if (!genre && sort === 'popularity.desc') {
+      resultsSection.classList.add('hidden');
+      document.getElementById('main-sections').classList.remove('hidden');
+      return;
+    }
+    resultsSection.classList.remove('hidden');
+    document.getElementById('main-sections').classList.add('hidden');
+    grid.innerHTML = ui.skeletonCards(10);
+    try {
+      const { results } = await api.movies.discover({ genre, sort_by: sort });
+      grid.innerHTML = results.map(m => ui.movieCard(m, '180px')).join('');
+    } catch {}
+  }
+
+  async function addToWatchlist(movie) {
+    if (!auth.isLoggedIn()) { ui.error('Sign in to use watchlist'); return; }
+    try {
+      await api.watchlist.add({
+        movieId: movie.id, title: movie.title,
+        posterPath: movie.poster_path, backdropPath: movie.backdrop_path,
+        overview: movie.overview, voteAverage: movie.vote_average
+      });
+      ui.success(`"${movie.title}" added to watchlist`);
+    } catch (err) { ui.error(err.message); }
+  }
+
+  // INIT
+  (async () => {
+    loadGenreOptions();
+    loadActivityFeed();
+    try {
+      const [trending, topRated, upcoming] = await Promise.all([
+        api.movies.trending(),
+        api.movies.topRated(),
+        api.movies.upcoming()
+      ]);
+      loadHero(trending.results || []);
+      loadRow('trending-row', (trending.results || []).slice(0, 12));
+      loadRow('top-rated-row', (topRated.results || []).slice(0, 12));
+      loadRow('upcoming-row', (upcoming.results || []).slice(0, 12));
+    } catch (err) {
+      document.getElementById('hero-section').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-dim)">⚠️ ${err.message}</div>`;
+    }
+  })();
+</script>
+</body>
+</html>

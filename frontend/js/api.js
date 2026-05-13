@@ -1,5 +1,5 @@
 // api.js — All API calls to the CineVerse backend
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'https://backend-m287.onrender.com';
 const TMDB_IMG = 'https://image.tmdb.org/t/p';
 
 const api = {

@@ -32,8 +32,16 @@
     <div style="margin-bottom:20px">
       <div class="input-label" style="margin-bottom:10px">Your Rating</div>
       <div style="display:flex;gap:4px" id="star-row">
-        ${Array.from({length:10}, (_,i) => `
-          <button class="star-btn" data-val="${i+1}" onmouseover="hoverStars(${i+1})" onmouseout="resetStars()" onclick="setRating(${i+1})">☆</button>`).join('')}
+        <button class="star-btn" data-val="1"  onmouseover="hoverStars(1)"  onmouseout="resetStars()" onclick="setRating(1)">☆</button>
+        <button class="star-btn" data-val="2"  onmouseover="hoverStars(2)"  onmouseout="resetStars()" onclick="setRating(2)">☆</button>
+        <button class="star-btn" data-val="3"  onmouseover="hoverStars(3)"  onmouseout="resetStars()" onclick="setRating(3)">☆</button>
+        <button class="star-btn" data-val="4"  onmouseover="hoverStars(4)"  onmouseout="resetStars()" onclick="setRating(4)">☆</button>
+        <button class="star-btn" data-val="5"  onmouseover="hoverStars(5)"  onmouseout="resetStars()" onclick="setRating(5)">☆</button>
+        <button class="star-btn" data-val="6"  onmouseover="hoverStars(6)"  onmouseout="resetStars()" onclick="setRating(6)">☆</button>
+        <button class="star-btn" data-val="7"  onmouseover="hoverStars(7)"  onmouseout="resetStars()" onclick="setRating(7)">☆</button>
+        <button class="star-btn" data-val="8"  onmouseover="hoverStars(8)"  onmouseout="resetStars()" onclick="setRating(8)">☆</button>
+        <button class="star-btn" data-val="9"  onmouseover="hoverStars(9)"  onmouseout="resetStars()" onclick="setRating(9)">☆</button>
+        <button class="star-btn" data-val="10" onmouseover="hoverStars(10)" onmouseout="resetStars()" onclick="setRating(10)">☆</button>
       </div>
       <div id="rating-label" class="text-dim text-sm" style="margin-top:8px">Click to rate</div>
     </div>

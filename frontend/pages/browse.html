@@ -74,6 +74,14 @@
       <div class="scroll-row" id="upcoming-row"></div>
     </div>
 
+    <!-- RECOMMENDED FOR YOU (genre-based) -->
+    <div style="margin-bottom:48px" id="recommended-section" class="hidden">
+      <div class="section-title">
+        🎯 Recommended For You
+      </div>
+      <div class="scroll-row" id="recommended-row"></div>
+    </div>
+
     <!-- FRIEND ACTIVITY -->
     <div style="margin-bottom:48px" id="activity-section">
       <div class="section-title">👥 Friend Activity</div>
@@ -203,10 +211,58 @@
     } catch (err) { ui.error(err.message); }
   }
 
+  // TMDB genre name → ID map (subset of common ones)
+  const GENRE_NAME_TO_ID = {
+    'Action': 28, 'Comedy': 35, 'Drama': 18, 'Horror': 27, 'Thriller': 53,
+    'Sci-Fi': 878, 'Romance': 10749, 'Mystery': 9648, 'Fantasy': 14, 'Anime': 16
+  };
+
+  async function loadRecommended() {
+    const user = auth.getUser();
+    const genres = user?.genres || [];
+    if (!genres.length) return;
+
+    // Pick up to 2 of the user's genres and discover movies for each
+    const picks = genres.slice(0, 2);
+    const section = document.getElementById('recommended-section');
+    const row = document.getElementById('recommended-row');
+
+    try {
+      // Fetch movies for each selected genre in parallel
+      const results = await Promise.all(picks.map(name => {
+        const id = GENRE_NAME_TO_ID[name];
+        if (!id) return Promise.resolve([]);
+        return api.movies.discover({ genre: id, sort_by: 'popularity.desc', page: 1 })
+          .then(d => d.results || [])
+          .catch(() => []);
+      }));
+
+      // Interleave results from each genre, deduplicate by id
+      const seen = new Set();
+      const merged = [];
+      const maxPerGenre = results.map(r => r.length);
+      const maxLen = Math.max(...maxPerGenre);
+      for (let i = 0; i < maxLen; i++) {
+        results.forEach(list => {
+          const m = list[i];
+          if (m && !seen.has(m.id)) { seen.add(m.id); merged.push(m); }
+        });
+      }
+
+      if (!merged.length) return;
+      section.classList.remove('hidden');
+      // Update label to show which genres
+      section.querySelector('.section-title').innerHTML =
+        `🎯 Recommended For You <span class="badge badge-red" style="font-size:11px">${picks.join(' · ')}</span>`;
+      row.innerHTML = merged.slice(0, 14).map(m => ui.movieCard(m, '160px')).join('');
+    } catch {}
+  }
+
   // INIT
   (async () => {
     loadGenreOptions();
     loadActivityFeed();
+    loadRecommended();
     try {
       const [trending, topRated, upcoming] = await Promise.all([
         api.movies.trending(),

@@ -1,4 +1,4 @@
-// api.js — All API calls to the CineVerse backend
+// api.js — All API calls to the CineMatch backend
 const BASE_URL = 'https://backend-m287.onrender.com/api';
 const TMDB_IMG = 'https://image.tmdb.org/t/p';
 

@@ -14,33 +14,58 @@
     }
     .hero-title {
       font-family: var(--font-display); font-size: clamp(72px, 12vw, 160px);
-      line-height: 0.85; letter-spacing: 2px; margin-bottom: 40px; position: relative; z-index: 1;
+      line-height: 0.85; letter-spacing: 2px; margin-bottom: 40px;
+      position: relative; z-index: 1;
+      animation: titleReveal 1s cubic-bezier(0.22,1,0.36,1) 2.8s both;
+    }
+    @keyframes titleReveal {
+      from { opacity:0; transform: translateY(40px) skewY(2deg); }
+      to   { opacity:1; transform: translateY(0) skewY(0); }
     }
     .hero-sub { color: var(--text-muted); }
+    .hero-tagline {
+      animation: fadeInUp 0.7s ease 3.0s both;
+      position: relative; z-index: 1;
+    }
     .search-bar {
       position: relative; width: 100%; max-width: 560px; z-index: 1;
+      animation: fadeInUp 0.7s ease 3.1s both;
     }
     .search-bar input {
-      width: 100%; background: rgba(17,17,17,0.6); border: 1px solid var(--border);
+      width: 100%; background: rgba(17,17,17,0.65); border: 1px solid var(--border);
       padding: 22px 64px 22px 24px; border-radius: 20px; color: var(--text);
       font-size: 17px; font-family: var(--font-body); outline: none; cursor: pointer;
-      backdrop-filter: blur(12px); transition: border-color 0.2s;
+      backdrop-filter: blur(16px);
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
     }
-    .search-bar input:hover { border-color: rgba(255,255,255,0.2); }
-    .search-bar-icon {
-      position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-      color: var(--text-muted); pointer-events: none;
+    .search-bar input:hover {
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 0 40px rgba(229,9,20,0.15);
+      transform: translateY(-2px);
     }
-    .genre-step { display: none; }
-    .genre-step.active { display: block; }
-    .genres-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px; }
+    .search-bar-icon { position:absolute; right:20px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none; }
+    .hero-btns { animation: fadeInUp 0.7s ease 3.2s both; position: relative; z-index: 1; }
+    .genres-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 32px; }
     @media (min-width: 600px) { .genres-grid { grid-template-columns: repeat(5, 1fr); } }
+    .genre-screen-inner { animation: fadeInUp 0.6s ease both; }
   </style>
 </head>
 <body>
 
+<!-- CURSOR GLOW -->
+<div id="cursor-glow"></div>
+
+<!-- NETFLIX-STYLE INTRO -->
+<div id="netflix-intro">
+  <div class="netflix-letter">
+    <span>C</span><span>I</span><span>N</span><span>E</span><span>M</span><span>A</span><span>T</span><span>C</span><span>H</span><span>.</span>
+  </div>
+  <div class="netflix-tagline">Your world. Your movies.</div>
+  <div class="netflix-bar"></div>
+</div>
+
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav" style="animation: fadeInUp 0.5s ease 2.9s both; opacity:0;">
   <span class="nav-logo">CINEMATCH.</span>
   <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
     <button class="btn btn-ghost btn-sm" onclick="goToLogin()">Sign In</button>
@@ -53,11 +78,13 @@
   <div class="landing-hero">
     <!-- Blobs -->
     <div class="blob-bg">
-      <div class="blob blob-red" id="blob1" style="width:600px;height:600px;top:10%;left:15%"></div>
-      <div class="blob blob-blue" id="blob2" style="width:700px;height:700px;bottom:10%;right:10%"></div>
+      <div class="blob blob-red"  id="blob1" style="width:600px;height:600px;top:5%;left:10%"></div>
+      <div class="blob blob-blue" id="blob2" style="width:700px;height:700px;bottom:5%;right:5%"></div>
     </div>
+    <!-- Floating particles injected by JS -->
+    <div id="particles"></div>
 
-    <p class="text-xs tracking-widest text-red uppercase" style="margin-bottom:20px;position:relative;z-index:1">Powered by TMDB · Personalized by AI</p>
+    <p class="text-xs tracking-widest text-red uppercase hero-tagline" style="margin-bottom:20px">Powered by TMDB · Personalized by AI</p>
     <h1 class="hero-title">MOVIES<br><span class="hero-sub">MADE FOR</span><br>YOU.</h1>
 
     <div class="search-bar">
@@ -67,7 +94,7 @@
       </svg>
     </div>
 
-    <div style="display:flex;gap:16px;margin-top:32px;position:relative;z-index:1">
+    <div class="hero-btns" style="display:flex;gap:16px;margin-top:32px">
       <button class="btn btn-primary btn-lg" onclick="startGuest()">Continue as Guest</button>
       <button class="btn btn-ghost btn-lg" onclick="showRegister()">Create Account</button>
     </div>
@@ -75,8 +102,8 @@
 </div>
 
 <!-- GENRE SELECTION STEP -->
-<div id="genre-screen" class="genre-step" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:120px 32px 60px">
-  <div style="max-width:900px;width:100%">
+<div id="genre-screen" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:120px 32px 60px">
+  <div class="genre-screen-inner" style="max-width:900px;width:100%">
     <p class="text-xs tracking-widest text-red uppercase" style="margin-bottom:12px">Step 1 of 1</p>
     <h2 style="font-family:var(--font-display);font-size:clamp(40px,6vw,80px);margin-bottom:8px">PICK 3+ GENRES</h2>
     <p class="text-dim" style="margin-bottom:40px;font-size:16px">We use this to train your personal recommendation engine.</p>
@@ -94,11 +121,11 @@
     <p class="text-dim text-center" style="margin-bottom:28px">Sign in to your CineMatch account</p>
     <div class="input-group" style="margin-bottom:16px">
       <label class="input-label">Email</label>
-      <input class="input" type="email" id="login-email" placeholder="you@example.com">
+      <input class="input" type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="input-group" style="margin-bottom:24px">
       <label class="input-label">Password</label>
-      <input class="input" type="password" id="login-password" placeholder="••••••••">
+      <input class="input" type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary w-full btn-lg" onclick="doLogin()">Sign In</button>
     <button class="btn btn-ghost w-full" style="margin-top:10px" onclick="ui.closeModal('login-modal');showRegister()">No account? Join Free</button>
@@ -110,7 +137,7 @@
 <div class="modal-overlay" id="register-modal">
   <div class="modal">
     <h3 class="text-3xl" style="text-align:center;margin-bottom:6px">Join the Plot.</h3>
-    <p class="text-dim text-center" style="margin-bottom:28px">Personalized IMDB 2.0 starts here.</p>
+    <p class="text-dim text-center" style="margin-bottom:28px">Personalized CineMatch starts here.</p>
     <div class="input-group" style="margin-bottom:14px">
       <label class="input-label">Username</label>
       <input class="input" id="reg-username" placeholder="cinephile99">
@@ -121,7 +148,7 @@
     </div>
     <div class="input-group" style="margin-bottom:24px">
       <label class="input-label">Password</label>
-      <input class="input" type="password" id="reg-password" placeholder="••••••••">
+      <input class="input" type="password" id="reg-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
     </div>
     <button class="btn btn-primary w-full btn-lg" onclick="doRegister()">Create Account</button>
     <button class="btn btn-ghost w-full" style="margin-top:10px" onclick="ui.closeModal('register-modal');goToLogin()">Already have an account? Sign In</button>
@@ -133,31 +160,71 @@
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
 <script>
+  /* ── CURSOR GLOW ── */
+  const glow = document.getElementById('cursor-glow');
+  let mx = window.innerWidth/2, my = window.innerHeight/2;
+  let gx = mx, gy = my;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  (function animGlow() {
+    gx += (mx - gx) * 0.08; gy += (my - gy) * 0.08;
+    glow.style.left = gx + 'px'; glow.style.top = gy + 'px';
+    requestAnimationFrame(animGlow);
+  })();
+
+  /* ── PARALLAX BLOBS ── */
+  document.addEventListener('mousemove', e => {
+    const px = (e.clientX - window.innerWidth/2) * 0.04;
+    const py = (e.clientY - window.innerHeight/2) * 0.04;
+    const b1 = document.getElementById('blob1');
+    const b2 = document.getElementById('blob2');
+    if (b1) b1.style.transform = `translate(${px}px, ${py}px)`;
+    if (b2) b2.style.transform = `translate(${-px*0.7}px, ${-py*0.7}px)`;
+  });
+
+  /* ── FLOATING PARTICLES ── */
+  function spawnParticles() {
+    const container = document.getElementById('particles');
+    if (!container) return;
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 4 + 2;
+      p.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}%;
+        animation-duration:${Math.random()*12+8}s;
+        animation-delay:${Math.random()*8}s;
+        opacity:${Math.random()*0.4+0.1};
+        background: ${Math.random()>0.5 ? 'rgba(229,9,20,0.5)' : 'rgba(255,255,255,0.15)'};
+      `;
+      container.appendChild(p);
+    }
+  }
+  spawnParticles();
+
+  /* ── REMOVE INTRO AFTER ANIMATION ── */
+  const intro = document.getElementById('netflix-intro');
+  if (intro) {
+    intro.addEventListener('animationend', e => {
+      if (e.animationName === 'introExit') {
+        intro.style.display = 'none';
+      }
+    });
+  }
+
+  /* ── REDIRECT IF LOGGED IN ── */
+  if (auth.isLoggedIn()) window.location.href = 'pages/browse.html';
+
   const GENRES = ['Sci-Fi','Action','Horror','Comedy','Drama','Anime','Thriller','Mystery','Romance','Fantasy'];
   let selectedGenres = [];
   let pendingGuestMode = false;
-
-  // Parallax blobs
-  document.addEventListener('mousemove', (e) => {
-    const mx = (e.clientX - window.innerWidth / 2) * 0.04;
-    const my = (e.clientY - window.innerHeight / 2) * 0.04;
-    const b1 = document.getElementById('blob1');
-    const b2 = document.getElementById('blob2');
-    if (b1) b1.style.transform = `translate(${mx}px, ${my}px)`;
-    if (b2) b2.style.transform = `translate(${-mx * 0.7}px, ${-my * 0.7}px)`;
-  });
-
-  // Redirect if already logged in
-  if (auth.isLoggedIn()) {
-    window.location.href = 'pages/browse.html';
-  }
 
   function openSearchModal() {
     if (!auth.isLoggedIn()) { showRegister(); return; }
     window.location.href = 'pages/browse.html';
   }
 
-  function goToLogin() { ui.openModal('login-modal'); }
+  function goToLogin()    { ui.openModal('login-modal'); }
   function showRegister() { ui.openModal('register-modal'); }
 
   function showGenreStep(isGuest) {
@@ -165,14 +232,15 @@
     document.getElementById('landing-screen').style.display = 'none';
     const gs = document.getElementById('genre-screen');
     gs.style.display = 'flex';
-    gs.classList.add('page-enter');
     renderGenreGrid();
   }
 
   function renderGenreGrid() {
     const grid = document.getElementById('genre-grid');
-    grid.innerHTML = GENRES.map(g => `
-      <div class="genre-pill${selectedGenres.includes(g) ? ' selected' : ''}" onclick="toggleGenre('${g}')">${g}</div>
+    grid.innerHTML = GENRES.map((g, i) => `
+      <div class="genre-pill${selectedGenres.includes(g) ? ' selected' : ''}"
+           style="animation: fadeInUp 0.4s ease ${i*0.05}s both"
+           onclick="toggleGenre('${g}')">${g}</div>
     `).join('');
   }
 
@@ -184,20 +252,16 @@
     renderGenreGrid();
   }
 
-  async function startGuest() {
-    showGenreStep(true);
-  }
+  async function startGuest() { showGenreStep(true); }
 
   async function submitGenres() {
     const btn = document.getElementById('genre-submit');
-    btn.disabled = true; btn.textContent = 'Setting up...';
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:8px"></span>Setting up...';
     try {
       let result;
-      if (pendingGuestMode) {
-        result = await api.auth.guest({ genres: selectedGenres });
-      } else {
-        result = await api.auth.updateGenres(selectedGenres);
-      }
+      if (pendingGuestMode) result = await api.auth.guest({ genres: selectedGenres });
+      else result = await api.auth.updateGenres(selectedGenres);
       if (result.token) auth.setSession(result.token, result.user);
       else auth.setSession(auth.getToken(), result.user);
       window.location.href = 'pages/browse.html';
@@ -211,26 +275,30 @@
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
     if (!email || !password) { ui.error('Fill in all fields'); return; }
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = 'Signing in…';
     try {
       const { token, user } = await api.auth.login({ email, password });
       auth.setSession(token, user);
       ui.closeModal('login-modal');
       if (!user.genres?.length) showGenreStep(false);
       else window.location.href = 'pages/browse.html';
-    } catch (err) { ui.error(err.message); }
+    } catch (err) { ui.error(err.message); btn.disabled=false; btn.textContent='Sign In'; }
   }
 
   async function doRegister() {
     const username = document.getElementById('reg-username').value;
-    const email = document.getElementById('reg-email').value;
+    const email    = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
     if (!username || !email || !password) { ui.error('Fill in all fields'); return; }
+    const btn = event.target;
+    btn.disabled=true; btn.textContent='Creating…';
     try {
       const { token, user } = await api.auth.register({ username, email, password });
       auth.setSession(token, user);
       ui.closeModal('register-modal');
       showGenreStep(false);
-    } catch (err) { ui.error(err.message); }
+    } catch (err) { ui.error(err.message); btn.disabled=false; btn.textContent='Create Account'; }
   }
 </script>
 </body>

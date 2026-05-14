@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
+<div id="cursor-glow"></div>
 <div id="main-nav"></div>
 <div id="main-sidebar"></div>
 
@@ -46,6 +47,10 @@
   }
 
   loadNotifs();
+</script>
+<script>
+  const _glow=document.getElementById('cursor-glow');
+  if(_glow){let _mx=window.innerWidth/2,_my=window.innerHeight/2,_gx=_mx,_gy=_my;document.addEventListener('mousemove',e=>{_mx=e.clientX;_my=e.clientY;});(function _ag(){_gx+=(_mx-_gx)*0.08;_gy+=(_my-_gy)*0.08;_glow.style.left=_gx+'px';_glow.style.top=_gy+'px';requestAnimationFrame(_ag);})();}
 </script>
 </body>
 </html>

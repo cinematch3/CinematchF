@@ -6,6 +6,7 @@
   <title>CineMatch — Movie</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
+    /* golden animated stars override */<br>
     .cast-card { text-align:center; flex-shrink:0; width:100px; }
     .cast-card img, .cast-placeholder {
       width:80px;height:80px;border-radius:50%;object-fit:cover;
@@ -13,11 +14,11 @@
       font-size:11px;color:var(--text-muted);margin:0 auto 8px;
     }
     .review-card { padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:16px; }
-    .star-btn { background:none;border:none;cursor:pointer;padding:4px;font-size:24px;transition:transform 0.15s; }
-    .star-btn:hover { transform:scale(1.2); }
+    /* star styles handled by style.css */
   </style>
 </head>
 <body>
+<div id="cursor-glow"></div>
 <div id="main-nav"></div>
 <div id="main-sidebar"></div>
 
@@ -195,17 +196,39 @@
   function hoverStars(n) {
     document.querySelectorAll('.star-btn').forEach((btn, i) => {
       btn.textContent = i < n ? '★' : '☆';
+      btn.classList.toggle('hovered', i < n);
+      btn.classList.toggle('lit', false);
     });
   }
   function resetStars() {
     document.querySelectorAll('.star-btn').forEach((btn, i) => {
       btn.textContent = i < userRating ? '★' : '☆';
+      btn.classList.toggle('lit', i < userRating);
+      btn.classList.remove('hovered');
     });
   }
   function setRating(n) {
     userRating = n;
-    document.getElementById('rating-label').textContent = `${n}/10 — ${['','Awful','Bad','Poor','Below Average','Average','Decent','Good','Great','Excellent','Masterpiece'][n]}`;
+    const labels = ['','Awful 😬','Bad 😕','Poor 😐','Meh 😶','Average 🙂','Decent 👍','Good 😊','Great 🔥','Excellent 🤩','Masterpiece 🏆'];
+    document.getElementById('rating-label').textContent = `${n}/10 — ${labels[n]}`;
     resetStars();
+    // Burst particle effect on the last lit star
+    const stars = document.querySelectorAll('.star-btn');
+    const lastStar = stars[n-1];
+    if (lastStar) {
+      const burst = document.createElement('div');
+      burst.className = 'star-burst';
+      for (let i = 0; i < 8; i++) {
+        const dot = document.createElement('span');
+        const angle = (i / 8) * Math.PI * 2;
+        dot.style.setProperty('--bx', Math.cos(angle)*28+'px');
+        dot.style.setProperty('--by', Math.sin(angle)*28+'px');
+        dot.style.animationDelay = (i*0.03)+'s';
+        burst.appendChild(dot);
+      }
+      lastStar.appendChild(burst);
+      setTimeout(() => burst.remove(), 600);
+    }
   }
 
   function openReviewModal() {
@@ -270,6 +293,10 @@
       loadMovie();
     } catch (err) { ui.error(err.message); }
   }
+</script>
+<script>
+  const _glow=document.getElementById('cursor-glow');
+  if(_glow){let _mx=window.innerWidth/2,_my=window.innerHeight/2,_gx=_mx,_gy=_my;document.addEventListener('mousemove',e=>{_mx=e.clientX;_my=e.clientY;});(function _ag(){_gx+=(_mx-_gx)*0.08;_gy+=(_my-_gy)*0.08;_glow.style.left=_gx+'px';_glow.style.top=_gy+'px';requestAnimationFrame(_ag);})();}
 </script>
 </body>
 </html>

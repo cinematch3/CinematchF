@@ -4,7 +4,7 @@ function renderNav(activePage = '') {
   const user = auth.getUser();
   return `
     <nav class="nav">
-      <a href="../index.html" class="nav-logo">CINEVERSE.</a>
+      <a href="../index.html" class="nav-logo">CINEMATCH.</a>
       <div class="nav-links">
         <a href="browse.html" class="nav-link ${activePage === 'browse' ? 'active' : ''}">Browse</a>
         <a href="friends.html" class="nav-link ${activePage === 'friends' ? 'active' : ''}">Friends</a>
